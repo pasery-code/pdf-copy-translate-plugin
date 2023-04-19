@@ -28,7 +28,7 @@
 - 点击进入对应API界面
 - 点击Subscribe to Test
 
-![API_leader](C:\Users\zjx\Desktop\API_leader.png)
+![API_leader](https://pasery-markdown-image.oss-cn-hangzhou.aliyuncs.com/img/202304192318532.png)
 
 - 选择免费方案，点击Subscribe 
 
