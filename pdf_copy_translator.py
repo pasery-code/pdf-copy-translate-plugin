@@ -11,7 +11,6 @@ import ttkbootstrap as ttk
 from tkinter.font import Font
 import tkinter as tk
 import tkinter.messagebox
-from ttkbootstrap.constants import *
 
 def getAPIKey():
     APIKey_dict = {}
@@ -47,21 +46,23 @@ class TranslateWindow:
         self.Baidu_API_Key = APIKey_dict.get("Baidu_API_Key", "")
 
         self.translate_tools = translate_tools
-
         self.master = master
         self.master.title("复制翻译")
         self.options = {item: index+1 for index, item in enumerate(translate_tools)}
         self.selected_option = ttk.StringVar(self.master)
         self.selected_option.set(translate_tools[0])
-        self.selected_option.trace('w', self.option_changed)
+        self.selected_option.trace('w', self.optionChanged)
         self.current_option = self.options[self.selected_option.get()]
         self.last_selected_text = ""
         self.translated_text = ""
+        self.temp_text = ""
         self.last_option = 1
-        self.create_widgets()
-        self.update_clipboard()
+        self.is_copy = False
+        self.createWidgets()
+        self.updateClipboard()
 
-    def create_widgets(self):
+
+    def createWidgets(self):
         font = Font(size=12)
         self.v = tk.StringVar(value="translate") # 创建变量v，用于存储选择的选项
         # 创建两个Radiobutton作为二选一的选择框
@@ -72,23 +73,25 @@ class TranslateWindow:
         radio_button_copy.grid(row=0, column=1, pady=10, padx=20)
         self.combo_box = ttk.Combobox(self.master, values=list(self.options.keys()), textvariable=self.selected_option, state="readonly", bootstyle="primary")
         self.combo_box.current(0)
-        self.combo_box.bind("<<ComboboxSelected>>", self.option_changed)
+        self.combo_box.bind("<<ComboboxSelected>>", self.optionChanged)
         self.combo_box.grid(row=1, column=0, columnspan=2, pady=15, padx=10)
         self.text_box = ttk.Text(self.master, height=10, width=47)
         self.text_box.grid(row=2, column=0, columnspan=2, pady=15, padx=10)
         self.text_box.configure(font=font,spacing1=10,spacing2=5)
-        self.copy_button = ttk.Button(self.master,text="复制",command=self.CopyTextBox,width=5)
+        self.copy_button = ttk.Button(self.master,text="复制",command=self.copyTextBox,width=5)
         self.copy_button.grid(row=1, column=1, pady=15, padx=10, sticky="e")
         
-    def CopyTextBox(self):
+    def copyTextBox(self):
+        self.is_copy = True
+        self.temp_text = pyperclip.paste()
         pyperclip.copy(self.translated_text)
         self.last_selected_text = pyperclip.paste()
 
-    def transform_select_pdf(self, input_text):
+    def transformSelectPdf(self, input_text):
         output_text = re.sub(r'\r\n\s*', ' ', input_text)
         return output_text
 
-    def Requests_url(self, text, select_translate_tools):
+    def requestsUrl(self, text, select_translate_tools):
         if select_translate_tools == "Text Translator":
             url = "https://text-translator2.p.rapidapi.com/translate"
 
@@ -206,28 +209,43 @@ class TranslateWindow:
             translated_text = response_dict['translation'][0]
 
         return translated_text
+    
 
-    def update_clipboard(self):
+    def translateText(self,selected_text):
+        self.text_box.delete("1.0", ttk.END)
+        transform_text = self.transformSelectPdf(selected_text)
+        self.translated_text = self.requestsUrl(transform_text, self.translate_tools[self.current_option - 1])
+        self.text_box.insert("1.0", self.translated_text)
+
+
+    def updateClipboard(self):
         selected_text = pyperclip.paste()
         if self.v.get() == "translate":
-            if (selected_text != self.last_selected_text or self.current_option != self.last_option) and isinstance(
-                    selected_text, str) and selected_text != "":
-                self.text_box.delete("1.0", ttk.END)
-                transform_text = self.transform_select_pdf(selected_text)
-                self.translated_text = self.Requests_url(transform_text, self.translate_tools[self.current_option - 1])
-                self.text_box.insert("1.0", self.translated_text)
+            if selected_text != self.last_selected_text and isinstance(selected_text, str) and selected_text != "":
+                self.translateText(selected_text)
                 self.last_selected_text = selected_text
                 self.last_option = self.current_option
+                self.is_copy = False
+                self.temp_text = ""
+            elif self.current_option != self.last_option:
+                if self.is_copy == False and isinstance(selected_text, str) and selected_text != "":
+                    self.translateText(selected_text)
+                    self.last_selected_text = selected_text
+                    self.last_option = self.current_option
+                elif self.is_copy == True and isinstance(self.temp_text, str) and self.temp_text != "":
+                    self.translateText(self.temp_text)
+                    self.last_option = self.current_option
+
         elif self.v.get() == "copy":
             if selected_text != self.last_selected_text and isinstance(
                     selected_text, str) and selected_text != "":
                 self.text_box.delete("1.0", ttk.END)
-                transform_text = self.transform_select_pdf(selected_text)
+                transform_text = self.transformSelectPdf(selected_text)
                 pyperclip.copy(transform_text)
                 self.last_selected_text = selected_text
-        self.master.after(200, self.update_clipboard)
+        self.master.after(200, self.updateClipboard)
 
-    def option_changed(self, *args):
+    def optionChanged(self, *args):
         self.current_option = self.options[self.selected_option.get()]
 
     def quit(self):
@@ -240,7 +258,6 @@ if __name__ == "__main__":
         tkinter.messagebox.askokcancel('提示', '未设置API')
     else:
         available_translate_tools = getAvailableTranslateTools(APIKey_dict)
-        print(APIKey_dict)
         pyperclip.copy("")
         root = ttk.Window()
         root.resizable(False, False)
