@@ -237,8 +237,7 @@ class TranslateWindow:
                     self.last_option = self.current_option
 
         elif self.v.get() == "copy":
-            if selected_text != self.last_selected_text and isinstance(
-                    selected_text, str) and selected_text != "":
+            if  isinstance(selected_text, str) and selected_text != "":
                 self.text_box.delete("1.0", ttk.END)
                 transform_text = self.transformSelectPdf(selected_text)
                 pyperclip.copy(transform_text)
